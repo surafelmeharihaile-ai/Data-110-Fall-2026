@@ -1,0 +1,151 @@
+---
+title: "Project 1"
+author: "Surafel Haile"
+format: html
+editor: visual
+---
+
+## Project 1 : Distribution of VA Disabilities.
+
+For this project, I will explore a data-set that has information about VA disability compensation recipients across geographic areas in the United States. The data-set contains 3,148 rows and 14 columns, including state, county name, FIPS code, total recipients, disability-rating categories, age groups, and sex. My research question is **Which VA disability-rating categories have the highest numbers of recipients, and how does the distribution compare across a few states?** 
+
+**Data source :** [VA Disability](https://catalog.data.gov/dataset/fy-2025-disability-compensation-recipients-by-county?from_hint=eyJzb3J0IjoicG9wdWxhcml0eSJ9)
+
+**Loading the data and the libraries:**
+
+```{r}
+library(tidyverse)
+library(readr)
+library(ggplot2)
+```
+
+```{r}
+setwd("C:/Users/suraf/OneDrive/New folder")
+veterans <- read.csv("export.csv")
+head(veterans)
+```
+
+First, I loaded the necessary library and imported the data set into Rstudio. I used **"head()"** to examine the first few rows.
+
+**Exploring the data:**
+
+```{r}
+colSums(is.na(veterans))
+str(veterans)
+```
+
+```{r}
+colSums(veterans == "")
+```
+
+Here, I examined the data types to determine whether the recipient counts were stored as numbers or text. As the results show, several count columns are currently stored as text because the numbers contain commas. These may need to be converted before calculations. I also checked the data-set for missing values to identify columns with incomplete information. There doesn't seem to any missing values here. Finally, I looked for empty strings in the data, because the some info not being available. Empty strings will affect the conversion of characters to numbers, so they have to be filtered out.
+
+```{r}
+veterans_clean <- veterans %>%
+  filter(State != "",County.Name != "",FIPS.code != "",
+    Total..Disability.Compensation.Recipients != "",
+    
+    SCD.rating..0..to.20. != "",
+    SCD.rating..30..to.40. != "",
+    SCD.rating..50..to.60. != "",
+    SCD.rating..70..to.90. != "",
+    SCD.rating..100. != "",
+    
+    Age..17.44 != "",
+    Age..45.64 != "",
+    Age..65.or.older != "",
+    
+    Male != "",
+    Female != ""
+  )
+```
+
+**"Veterans_clean"** is the cleaned version of the original data. Using **"filter()",** it removes rows that contain empty strings in any of the columns. This makes sure all the retained records have values in all the specified columns before further analysis.
+
+**Converting the values to numeric:**
+
+```{r}
+#Compensation
+VTDCR <- as.numeric(gsub(",", "",veterans_clean$Total..Disability.Compensation.Recipients))
+```
+
+```{r}
+#Ratings
+num_rating_0_20<-
+  as.numeric(gsub(",", "", veterans_clean$SCD.rating..0..to.20.))
+
+num_rating_30_40<-
+  as.numeric(gsub(",", "", veterans_clean$SCD.rating..30..to.40.))
+
+num_rating_50_60 <-
+  as.numeric(gsub(",", "", veterans_clean$SCD.rating..50..to.60.))
+
+num_rating_70_90 <-
+  as.numeric(gsub(",", "", veterans_clean$SCD.rating..70..to.90.))
+
+num_rating_100 <-
+  as.numeric(gsub(",", "", veterans_clean$SCD.rating..100.))
+```
+
+As mentioned previously, the data-set originally stored the recipient counts as character variables. For example, a value such as "2,949" was stored as a text rather than a number. I used **"gsub()"** to remove the commas and **"as.numeric()"** to convert the values into numbers.
+
+**Calculating the total recipients for each rating category:**
+
+```{r}
+rating_totals <- data.frame(
+  Rating = c("0%-20%", "30%-40%", "50%-60%", "70%-90%", "100%"),
+  Recipients = c(
+    sum(num_rating_0_20),
+    sum(num_rating_30_40),
+    sum(num_rating_50_60),
+    sum(num_rating_70_90),
+    sum(num_rating_100)
+  )
+)
+head(rating_totals)
+```
+
+This new data frame contains the five disability-rating categories and their corresponding total recipient counts. The "**sum()"** function adds the reported counts in each numeric rating variable to calculate the total for each category.
+
+**Visualizations:**
+
+```{r}
+ggplot(rating_totals, aes(x = Rating, y = Recipients, fill= Rating)) +
+  geom_bar(stat= "identity")+
+  scale_fill_brewer(palette = "Set1")+
+  labs(
+    title = "VA Disability Recipients by Rating Category",
+    x = "Disability Rating",
+    y = "Number of Recipients",
+    caption = "U.S. Department of Veterans Affairs"
+  ) +
+  theme_minimal()
+```
+
+This bar chart compares the total number of VA disabilities compensation recipients across five disability rating categories. The graph shows that the 70%-90% and 100% categories have the highest reported recipients. The 30% -40% category has the lowest amount of recipients. For the 0%-20% category as well as the 30% -40% one the count runs to a little above 500,000 recipients. An important information is that these ratings represent the VA's assessment of the severity of service-connected disabilities. Higher ratings generally indicate greater disability.
+
+```{r}
+percentage_num_100 <- num_rating_100 / VTDCR * 100
+veterans_clean$Pct_100 <- percentage_num_100
+head(veterans_clean$Pct_100)
+```
+
+Before the next visualization, this code calculates the percentage of VA disabilities compensation recipients who have 100% disability rating. It then stores the calculated percentage in a new column called **Pct_100** in the **veterans_clean** data-set.
+
+```{r}
+veterans_clean %>%
+  filter(State %in% c("Maryland", "Virginia", "Pennsylvania")) %>%
+  ggplot(aes(x = State, y = Pct_100, fill = State)) +
+  geom_boxplot() +
+  scale_fill_discrete() +
+  labs(
+    title = "County-Level Counts of 100% Disability Ratings",
+    x = "State",
+    y = "Percentage of Recipients with a 100% Rating",
+    fill = "State",
+    caption = "U.S. Department of Veterans Affairs"
+  ) +
+  theme_minimal()
+```
+
+The last visualization compares the percentage of VA disability compensation recipients with a 100% disability rating across counties in Maryland, Pennsylvania, and Virginia. Maryland has the highest median percentage, at 29%, followed by Virginia at about 28%. Pennsylvania has the lowest median, at around 24%. Virginia shows a wider spread of county percentages. Maryland also has few counties with unusually high percentages, while Pennsylvania's county percentage appear more closely grouped.
