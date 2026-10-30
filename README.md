@@ -1,2 +1,7 @@
-# Data-110-Fall-2026
-Class of Data 110 fall 2026
+# Project 1: Distribution of VA Disabilities
+
+**Author:** Surafel Haile
+
+## Published Report
+
+[Click here to view my finished Quarto report on RPubs](https://rpubs.com/Surafel/1469880)
